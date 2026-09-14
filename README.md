@@ -167,6 +167,8 @@ poetry run task check
 
 As tarefas disponíveis podem ser consultadas com `poetry run task --list`. Os comandos individuais incluem `task test`, `task lint`, `task format`, `task types` e `task docs`.
 
+`poetry run task tests` (ou `task test`) executa os testes com cobertura do pacote `air_traffic_beam`, mostra as linhas não cobertas e gera `coverage.xml`. A cobertura mínima exigida é de 70%, tanto localmente quanto no CI. `task lint` verifica o código, a ordem dos imports e a formatação com Ruff; `task format` organiza os imports e formata o código.
+
 Para habilitar a validação automática antes de cada commit, execute o comando dentro de um repositório Git:
 
 ```bash
@@ -181,6 +183,12 @@ poetry run streamlit run src/air_traffic_beam/dashboard/app.py
 ```
 
 O painel prioriza a visão Gold mais recente, com filtros por país e situação da aeronave, KPIs, mapa, tabela formatada e histórico de qualidade das execuções.
+
+## Documentação no GitHub Pages
+
+O CI valida a documentação com `poetry run mkdocs build --strict` em pull requests e pushes para `main` ou `master`. Após todas as verificações passarem, as execuções na branch padrão publicam o site no [GitHub Pages](https://lal3x.github.io/air-traffic-medallion-pipeline/). Também é possível iniciar o workflow `CI` manualmente pela aba **Actions**, selecionando a branch padrão.
+
+Para habilitar a publicação, configure **Settings → Pages → Build and deployment → Source → GitHub Actions** no repositório. O workflow usa o `GITHUB_TOKEN`, sem necessidade de um token pessoal.
 
 ## Guias de estudo
 

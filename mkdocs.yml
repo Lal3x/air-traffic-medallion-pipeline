@@ -1,8 +1,9 @@
 site_name: Brazil Air Traffic Beam
 site_description: Documentação do pipeline local de dados para monitoramento do tráfego aéreo com Apache Beam
 site_author: Lucas Alexandre
-repo_url: https://github.com/Lal3x
-repo_name: Lal3x
+site_url: https://lal3x.github.io/air-traffic-medallion-pipeline/
+repo_url: https://github.com/Lal3x/air-traffic-medallion-pipeline
+repo_name: Lal3x/air-traffic-medallion-pipeline
 
 nav:
   - Home: index.md

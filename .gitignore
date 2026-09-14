@@ -4,14 +4,29 @@ __pycache__/
 .ruff_cache/
 .mypy_cache/
 .coverage
+.coverage.*
+coverage.xml
 htmlcov/
 
 .venv/
+.vscode/
 .env
+.env.*
 !.env.example
 
-# Generated medallion data
+# Python build artifacts
+build/
+dist/
+*.egg-info/
+
+# Generated documentation
 site/
+
+# Local OS files
+.DS_Store
+Thumbs.db
+
+# Generated medallion data
 data/bronze/**
 data/silver/**
 data/gold/**

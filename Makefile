@@ -32,7 +32,7 @@ dashboard:
 	$(POETRY) run streamlit run src/air_traffic_beam/dashboard/app.py
 
 test:
-	$(POETRY) run pytest -q
+	$(POETRY) run task tests
 
 lint:
 	$(POETRY) run ruff check .
