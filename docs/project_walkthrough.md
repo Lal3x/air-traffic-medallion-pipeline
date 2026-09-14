@@ -21,7 +21,8 @@ flowchart LR
     GoldRead --> Summary[Resumo agregado]
     Latest --> Gold[Gold JSONL]
     Summary --> Gold
-    Gold --> DuckDB[DuckDB fallback]
+    Silver -.-> DuckDB[DuckDB fallback]
+    DuckDB --> Dashboard
     Gold --> Dashboard[Streamlit]
     Collector --> Reports[Relatórios JSON]
     Silver --> Reports
@@ -55,7 +56,7 @@ O cliente valida que a resposta é um objeto JSON, que possui `time` e que `stat
 
 ## 3. Bronze: resposta bruta envelopada
 
-`collectors/aircraft_states.py` preserva a resposta original e adiciona metadados de ingestão. A escrita é atômica: o arquivo temporário só é renomeado quando a linha JSONL foi gravada.
+`collectors/aircraft_states.py` adiciona metadados de ingestão à resposta validada pelo cliente. A escrita é atômica: o arquivo temporário só é renomeado quando todas as linhas do microbatch foram gravadas.
 
 Exemplo reduzido:
 
@@ -103,12 +104,12 @@ A OpenSky retorna cada aeronave como um array posicional. `STATE_INDEXES` docume
 17 category           categoria opcional
 ```
 
-`normalize_state_vector()` usa esses índices, valida coordenadas, remove espaços do callsign, converte velocidade de m/s para km/h e cria `last_contact_at` como `datetime` UTC tipado. `last_contact` continua preservado como epoch original.
+`normalize_state_vector()` usa esses índices, valida coordenadas, remove espaços nas extremidades do callsign, converte velocidade de m/s para km/h e cria `last_contact_at` como `datetime` tipado no fuso `America/Sao_Paulo`. `last_contact` continua preservado como epoch original.
 
 Exemplo Silver:
 
 ```json
-{"icao24":"e8045f","callsign":"LAN756","origin_country":"Chile","longitude":-46.6499,"latitude":-23.461,"velocity_mps":101.59,"velocity_kmh":365.724,"barometric_altitude_m":1417.32,"on_ground":false,"last_contact":1789358815,"last_contact_at":"2026-09-14T04:06:55Z"}
+{"icao24":"e8045f","callsign":"LAN756","origin_country":"Chile","longitude":-46.6499,"latitude":-23.461,"velocity_mps":101.59,"velocity_kmh":365.724,"barometric_altitude_m":1417.32,"on_ground":false,"last_contact":1789358815,"last_contact_at":"2026-09-14T01:06:55-03:00"}
 ```
 
 ## 6. Válidos e rejeitados
@@ -122,7 +123,7 @@ Exemplo Silver:
 
 ## 7. Silver
 
-A saída válida é gravada em Parquet usando `WriteToParquet` e `SILVER_AIRCRAFT_SCHEMA`. O schema fixa tipos analíticos, incluindo timestamp UTC, números e booleanos. O prefixo recebe UUID de execução, portanto uma nova execução não apaga as anteriores.
+A saída válida é gravada em Parquet usando `WriteToParquet` e `SILVER_AIRCRAFT_SCHEMA`. O schema fixa tipos analíticos, incluindo timestamp com fuso `America/Sao_Paulo`, números e booleanos. O prefixo recebe UUID de execução, portanto uma nova execução não apaga as anteriores.
 
 O relatório `bronze_to_silver-<uuid>.json` registra arquivos, entradas, válidos, rejeitados, taxa de erro e caminhos produzidos. Quando não há válidos ou rejeitados, a etapa registra essa situação explicitamente.
 
@@ -139,7 +140,7 @@ O relatório `bronze_to_silver-<uuid>.json` registra arquivos, entradas, válido
 Exemplo de posição Gold:
 
 ```json
-{"icao24":"e8045f","callsign":"LAN756","latitude":-23.461,"longitude":-46.6499,"last_contact_at":"2026-09-14 04:06:55+00:00"}
+{"icao24":"e8045f","callsign":"LAN756","latitude":-23.461,"longitude":-46.6499,"last_contact_at":"2026-09-14 01:06:55-03:00"}
 ```
 
 Exemplo de resumo Gold:
@@ -168,7 +169,7 @@ A UI apresenta mapa, filtros, tabela de aeronaves e uma aba de qualidade. A aba 
 - terminal: INFO do pacote `air_traffic_beam` e somente ERROR de Beam/Prism;
 - arquivo: INFO técnico completo em `data/observability/logs/pipeline.log`, com rotação de 5 MB e três backups.
 
-Cada estágio escreve um relatório JSON em `data/observability/`. Esses relatórios são a fonte das métricas mostradas no terminal pelo `run_all`; não são números calculados a partir de todo o histórico.
+Cada estágio concluído escreve um relatório JSON em `data/observability/`; falhas anteriores à gravação podem não gerar relatório, conforme [Logs e relatórios](reports.md). Esses relatórios são a fonte das métricas mostradas no terminal pelo `run_all`; não são números calculados a partir de todo o histórico.
 
 Use `--verbose` para exibir INFO do Beam no terminal:
 

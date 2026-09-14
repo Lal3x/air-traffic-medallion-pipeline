@@ -18,7 +18,11 @@ poetry run streamlit run src/air_traffic_beam/dashboard/app.py
 
 ## Estratégia de leitura
 
-O dashboard lê os artefatos mais recentes da pasta Gold e usa o horário de modificação do arquivo para selecionar o snapshot atual. Isso evita assumir que o nome do arquivo contém a data mais recente.
+O dashboard escolhe, separadamente, o arquivo `latest` e o arquivo `traffic` mais recentes pelo horário de modificação. Se não houver arquivo `latest` Gold, consulta Parquets Silver com DuckDB como alternativa; nessa leitura, não há deduplicação por aeronave.
+
+O painel carrega até 500 registros antes de aplicar os filtros por país, categoria e situação. Os KPIs do topo refletem essa seleção; o resumo da aba **Qualidade** representa todas as observações processadas em Gold.
+
+O cache tem validade de 30 segundos, mas isso não agenda atualização automática da página. Use **Atualizar dados** para limpar o cache e recarregar. O painel não executa o pipeline. Os dados representam as observações dos arquivos escolhidos, sem garantia de que as posições ainda sejam atuais.
 
 ## Boas práticas
 

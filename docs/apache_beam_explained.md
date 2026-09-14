@@ -28,7 +28,7 @@ Prism aparece nos logs como parte do caminho local moderno do DirectRunner. Ele 
 Uma `PCollection` é a coleção distribuída de elementos que passa entre transformações. Exemplos:
 
 - `lines`: linhas JSONL Bronze;
-- `parsed.valid`: envelopes que passaram pelo parsing;
+- `parsed.valid`: observações de aeronaves já expandidas e normalizadas pelo parsing;
 - `parsed.rejected`: tagged output de entradas inválidas;
 - `normalized.valid`: registros Silver prontos para Parquet.
 
@@ -88,7 +88,7 @@ A Gold agrupa observações pelo `icao24`:
 
 O projeto seleciona a posição mais recente em `_latest_by_aircraft`. Isso é uma combinação por chave feita explicitamente sobre as observações de cada aeronave.
 
-Em pipelines maiores, `CombinePerKey` costuma ser preferível quando existe um acumulador associativo e comutativo, pois permite combinar parcialmente os dados e reduzir memória/shuffle. O projeto usa `GroupByKey` porque precisa escolher um registro completo, não apenas somar ou contar um valor.
+Em pipelines maiores, `CombinePerKey` costuma ser preferível quando existe um acumulador associativo e comutativo, pois permite combinar parcialmente os dados e reduzir memória/shuffle. O projeto usa `GroupByKey` para explicitar o agrupamento didaticamente. Selecionar um registro completo também pode ser implementado com um `CombineFn`, definindo um critério estável de desempate.
 
 ## Combine e agregações
 
