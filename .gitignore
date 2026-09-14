@@ -1,0 +1,29 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+.venv/
+.env
+!.env.example
+
+# Generated medallion data
+site/
+data/bronze/**
+data/silver/**
+data/gold/**
+data/rejected/**
+data/observability/**
+
+# Keep test fixtures versioned
+!tests/fixtures/
+!tests/fixtures/**
+!data/.gitkeep
+!data/bronze/.gitkeep
+!data/silver/.gitkeep
+!data/gold/.gitkeep
+!data/rejected/.gitkeep
+!data/observability/.gitkeep

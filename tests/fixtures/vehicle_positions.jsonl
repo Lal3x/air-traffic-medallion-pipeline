@@ -1,0 +1,5 @@
+{"vehicle_id":"1001","line_code":"875A-10","latitude":"-23.5615","longitude":"-46.6559","event_timestamp":"2026-09-14T10:00:00Z"}
+{"vehicle_id":"1002","line_code":"875A-10","latitude":-23.562,"longitude":-46.6565,"event_timestamp":"2026-09-14T10:01:00Z"}
+{"vehicle_id":"1003","line_code":"702U-10","latitude":null,"longitude":-46.65,"event_timestamp":"2026-09-14T10:02:00Z"}
+{"vehicle_id":"1004","line_code":"702U-10","latitude":200,"longitude":-46.65,"event_timestamp":"2026-09-14T10:03:00Z"}
+not valid json

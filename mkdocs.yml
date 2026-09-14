@@ -1,0 +1,78 @@
+site_name: Brazil Air Traffic Beam
+site_description: Documentação do pipeline local de dados para monitoramento do tráfego aéreo com Apache Beam
+site_author: Lucas Alexandre
+repo_url: https://github.com/Lal3x
+repo_name: Lal3x
+
+nav:
+  - Home: index.md
+  - Visão Geral:
+      - Introdução: overview.md
+      - Arquitetura: architecture.md
+      - Fluxo de dados: data_flow.md
+  - Guia de Execução:
+      - Instalação: setup.md
+      - Execução local: running.md
+      - Coleta: collection.md
+      - Bronze -> Silver: bronze_to_silver.md
+      - Silver -> Gold: silver_to_gold.md
+      - Dashboard: dashboard.md
+  - Operação:
+      - Observabilidade: observability.md
+      - Logs e relatórios: reports.md
+      - FAQ: faq.md
+  - Estudo com Beam:
+      - Apache Beam explicado: apache_beam_explained.md
+      - Walkthrough do projeto: project_walkthrough.md
+  - Referência:
+      - Dicionário de dados: data_dictionary.md
+      - Glossário: glossary.md
+
+theme:
+  name: material
+  language: pt-BR
+  font:
+    text: Space Grotesk
+    code: IBM Plex Mono
+  icon:
+    logo: material/airplane
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+    - search.suggest
+    - search.highlight
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: blue
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: cyan
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.highlight
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.tasklist:
+      custom_checkbox: true
+
+plugins:
+  - search
+
+extra_css:
+  - stylesheets/extra.css

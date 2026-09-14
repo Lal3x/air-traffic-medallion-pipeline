@@ -1,0 +1,14 @@
+opensky_api_base_url: https://opensky-network.org/api
+opensky_lat_min: -24.2
+opensky_lon_min: -47.2
+opensky_lat_max: -22.7
+opensky_lon_max: -45.5
+opensky_request_timeout_seconds: 30
+opensky_interval_seconds: 60
+opensky_max_collections: 5
+bronze_base_path: data/bronze
+silver_base_path: data/silver
+gold_base_path: data/gold
+rejected_base_path: data/rejected
+observability_base_path: data/observability
+log_level: INFO
