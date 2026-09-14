@@ -13,6 +13,11 @@ repos:
     rev: v6.0.0
     hooks:
       - id: check-yaml
+        exclude: ^mkdocs\.yml$
+      - id: check-yaml
+        name: check MkDocs YAML syntax
+        files: ^mkdocs\.yml$
+        args: [--unsafe]
       - id: check-toml
       - id: end-of-file-fixer
       - id: trailing-whitespace
@@ -21,8 +26,9 @@ repos:
   - repo: local
     hooks:
       - id: pytest
-        name: pytest
-        entry: poetry run pytest -q
+        name: pytest with coverage (minimum 70%)
+        entry: poetry run task tests
         language: system
         pass_filenames: false
+        always_run: true
         stages: [pre-commit]

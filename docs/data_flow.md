@@ -7,17 +7,18 @@ O projeto organiza os dados em camadas lógicas para manter clareza entre coleta
 ```mermaid
 flowchart LR
     A[OpenSky API] --> B[Bronze: JSONL bruto]
-    B --> C[Silver: Parquet validado]
+    B --> V[Beam: validação]
+    V --> C[Silver: Parquet validado]
     C --> D[Gold: latest + traffic]
     D --> E[Streamlit Dashboard]
-    B --> F[Arquivos rejeitados]
+    V --> F[Arquivos rejeitados]
     C --> G[Relatórios JSON]
     D --> G
 ```
 
 ## Bronze
 
-A camada Bronze guarda a resposta original da coleta inteira, preservando o payload bruto e o contexto da execução, como tempo local, região e identificadores de microbatch.
+A camada Bronze guarda um arquivo por execução, com uma linha por resposta. Cada envelope contém o payload validado pelo cliente e metadados de ingestão; `states: null` é convertido em lista vazia antes da gravação.
 
 ## Silver
 
@@ -28,7 +29,7 @@ A camada Silver converte cada vetor do OpenSky em um esquema estável e útil pa
 A camada Gold contém duas visões:
 
 - `latest`: snapshot mais recente por aeronave;
-- `traffic`: agregações de movimento e contagem por janela de execução.
+- `traffic`: agregações sobre todas as observações dos arquivos de entrada, sem janelas temporais Beam.
 
 ## Rejeitados
 

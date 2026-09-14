@@ -1,217 +1,159 @@
 # Brazil Air Traffic Beam
 
-## Objetivo
-
-Este projeto implementa um pipeline local de dados para monitoramento do tráfego aéreo sobre a região de São Paulo, usando Apache Beam e arquitetura medalhão. A fonte primária é a API pública da OpenSky Network, acessada anonimamente sem cliente ID, client secret, token ou conta.
-
-A estrutura atual executa localmente com `DirectRunner` e organiza os dados em Bronze, Silver e uma etapa posterior de Gold, sem anunciar suporte a Dataflow, S3 ou streaming em produção.
+Pipeline local de tráfego aéreo na região de São Paulo, com coleta OpenSky, Apache Beam e arquitetura medalhão. O projeto transforma respostas da API em dados analíticos, mantém artefatos por execução e apresenta os resultados em um dashboard Streamlit.
 
 ## Arquitetura
 
-- Bronze: coleta JSONL da API OpenSky com metadata de execução e bounding box.
-- Silver: transformação dos state vectors para registros normalizados e validados.
-- Gold: uma visão atual por aeronave e um resumo agregado do tráfego.
-
-## Bounding box utilizada
-
-A API é consultada com a região de São Paulo definida por:
-
-- `lat_min=-24.2`
-- `lon_min=-47.2`
-- `lat_max=-22.7`
-- `lon_max=-45.5`
-
-## Variáveis de ambiente
-
-Crie um arquivo `.env` a partir do arquivo `.env.example` com as configurações a seguir:
-
-```dotenv
-OPENSKY_API_BASE_URL=https://opensky-network.org/api
-OPENSKY_LAT_MIN=-24.2
-OPENSKY_LON_MIN=-47.2
-OPENSKY_LAT_MAX=-22.7
-OPENSKY_LON_MAX=-45.5
-OPENSKY_REQUEST_TIMEOUT_SECONDS=30
-OPENSKY_INTERVAL_SECONDS=60
-OPENSKY_MAX_COLLECTIONS=5
-BRONZE_BASE_PATH=data/bronze
-```
-
-O arquivo `.env` é ignorado pelo Git. As variáveis antigas da SPTrans podem ser removidas manualmente.
-
-## Coleta anônima
-
-A coleta usa o endpoint público:
-
 ```text
-GET https://opensky-network.org/api/states/all
+OpenSky → Coletor Python → Bronze (JSONL)
+                              ↓ Apache Beam
+                         Silver (Parquet) + Rejeitados (JSONL)
+                              ↓ Apache Beam
+                         Gold (JSONL) → Streamlit
 ```
 
-Os limites geográficos são enviados como query parameters e a execução é finita e controlada por `--max-collections`.
+- **Bronze:** um arquivo por coleta, com um envelope por resposta e metadados de ingestão.
+- **Silver:** observações normalizadas e validadas, com coordenadas, velocidade e último contato.
+- **Gold:** última observação por `icao24` e resumo de todas as observações da carga.
+- **Observabilidade:** relatórios JSON por etapa e logs técnicos da execução completa.
 
-### Comando de coleta
+Os pipelines usam `DirectRunner` localmente. `make stream` repete lotes finitos; não há um pipeline de streaming ilimitado configurado.
+
+## Começar
+
+Requisitos: Python 3.13, Poetry e Git. Os exemplos de shell usam Bash; os atalhos `make` exigem Make.
 
 ```bash
-poetry run python -m air_traffic_beam.collectors.aircraft_states \
-  --max-collections 5 \
-  --interval-seconds 60
+git clone https://github.com/Lal3x/air-traffic-medallion-pipeline.git
+cd air-traffic-medallion-pipeline
+poetry env use python3.13
+poetry install --with dev
+cp .env.example .env
+poetry run python -m air_traffic_beam.run_all --max-collections 1 --interval-seconds 1
 ```
 
-Também é possível definir um diretório de saída diferente com `--output`.
-
-### Exemplo de saída Bronze
-
-```text
-data/bronze/aircraft_states/
-  ingestion_date=YYYY-MM-DD/
-    hour=HH/
-      microbatch_<execution_id>.jsonl
-```
-
-    Cada arquivo representa uma execução de coleta e cada linha contém um envelope com `_metadata` e `payload`.
-O `payload` é mantido como a resposta da API, sem renomear ou limpar campos. Respostas com `states: null` são tratadas de forma controlada no processamento, mas a camada Bronze preserva o payload original.
-
-## Pipeline Bronze → Silver
+Se já possui o clone e o `.env`, use os arquivos existentes. Em outro terminal, na raiz do projeto:
 
 ```bash
-poetry run python -m air_traffic_beam.pipelines.bronze_to_silver \
-  --runner=DirectRunner \
-  --direct_num_workers=1
+poetry run streamlit run src/air_traffic_beam/dashboard/app.py
 ```
 
-O pipeline lê o envelope da Bronze, expande os state vectors da OpenSky, valida campos, normaliza `callsign`, converte unidades e grava registros válidos em Parquet e os rejeitados em JSONL.
+Abra o endereço exibido pelo Streamlit, normalmente `http://localhost:8501`. Use **Atualizar dados** depois de uma nova carga. O painel lê arquivos locais e não inicia a coleta.
 
-### Saídas esperadas
+## Configuração da coleta
 
-```text
-data/silver/aircraft_states/
-data/rejected/aircraft_states/
-```
+O cliente consulta `/states/all` sem enviar credenciais. A região padrão é:
 
-## Pipeline Silver → Gold
+| Limite | Valor |
+| --- | --- |
+| Latitude mínima | -24.2 |
+| Longitude mínima | -47.2 |
+| Latitude máxima | -22.7 |
+| Longitude máxima | -45.5 |
 
-O Gold lê todos os arquivos Parquet da Silver e produz duas visões em JSONL:
+Para alterar região, quantidade, intervalo ou destino Bronze, use `--lat-min`, `--lon-min`, `--lat-max`, `--lon-max`, `--max-collections`, `--interval-seconds` e `--output`.
 
-- `data/gold/latest/`: uma observação mais recente por `icao24`, usando `last_contact`.
-- `data/gold/traffic/`: contagem de observações, aeronaves únicas, aeronaves no ar/no solo, velocidade média, altitude média e último contato.
+Embora `Settings` leia `.env`, a CLI passa valores explícitos que prevalecem sobre ele. URL e timeout são lidos pelo coletor de variáveis exportadas no processo. Veja a [configuração detalhada](docs/setup.md) antes de alterar esses parâmetros.
+
+O cliente converte `states: null` em `[]` antes de gravar Bronze. Timeouts, falhas de conexão e HTTP 5xx permitem até três tentativas; HTTP 429 interrompe a coleta sem repetição automática. A mensagem de erro inclui o tempo de espera informado pela API quando disponível.
+
+## Execução e reprocessamento
+
+`make run` executa uma carga completa. O orquestrador passa entre as etapas somente os arquivos recém-produzidos.
+
+Para executar cada etapa isoladamente:
 
 ```bash
-poetry run python -m air_traffic_beam.pipelines.silver_to_gold \
-  --runner=DirectRunner \
-  --direct_num_workers=1
+make collect
+make bronze-to-silver
+make silver-to-gold
 ```
 
-O processamento usa `ReadAllFromParquet` e permanece compatível com execução local no DirectRunner.
+**As etapas isoladas leem o histórico por padrão.** Reprocessar a mesma Bronze gera novos Parquets Silver; agregá-los com os anteriores pode contar observações repetidas. Use `--input` para selecionar a carga desejada ou prefira `make run`.
 
-## Observabilidade
-
-O terminal mostra somente as fases, métricas e mensagens INFO do pacote do projeto. O log técnico completo, incluindo INFO do Apache Beam e do Prism, fica em `data/observability/logs/pipeline.log` e usa rotação de 5 MB com três backups. Exceções e tracebacks são preservados nesse arquivo; erros importantes continuam visíveis no terminal.
-
-Cada execução do coletor, Bronze → Silver e Silver → Gold grava um relatório JSON em `data/observability/`. Os relatórios incluem status, duração, quantidade de entradas e saídas, rejeições, taxa de erro e caminhos dos artefatos. A aba `Qualidade` do dashboard apresenta esses relatórios junto do resumo Gold.
-
-Os sinks Bronze, Silver e Gold usam prefixos com UUID de execução. Assim, uma nova execução não apaga resultados anteriores e os relatórios contabilizam somente os artefatos produzidos naquela execução.
-
-Para exibir também os logs INFO internos do Beam e do Prism no terminal:
-
-```bash
-poetry run python -m air_traffic_beam.run_all --verbose
-```
-
-Para manter uma execução contínua em micro-batches de cinco minutos:
+Para repetir cargas:
 
 ```bash
 make stream
 ```
 
-Esse comando executa cinco coletas por ciclo, processa Bronze → Silver → Gold, atualiza o snapshot do dashboard e aguarda `300` segundos antes da próxima carga. O intervalo entre ciclos pode ser alterado com `make stream STREAM_INTERVAL_SECONDS=60`; a quantidade de coletas com `make stream STREAM_MAX_COLLECTIONS=10`. Interrompa com `Ctrl+C`; uma falha encerra o loop para evitar novas cargas incompletas.
-
-## Estrutura dos dados
-
-Cada state vector da OpenSky segue a ordem oficial:
-
-```text
-0  icao24
-1  callsign
-2  origin_country
-3  time_position
-4  last_contact
-5  longitude
-6  latitude
-7  baro_altitude
-8  on_ground
-9  velocity
-10 true_track
-11 vertical_rate
-12 sensors
-13 geo_altitude
-14 squawk
-15 spi
-16 position_source
-17 category
-```
-
-## Observações de uso
-
-- A API OpenSky pode responder `HTTP 429` quando o limite de uso anônimo é excedido.
-- O código trata `429` separadamente e não reaplica a requisição imediatamente.
-- `X-Rate-Limit-Remaining` e `Retry-After` são lidos quando disponíveis.
-- O pipeline atual executa localmente com `DirectRunner`, sem depender de Dataflow, S3 ou streaming real.
-
-## Comandos principais
+O padrão é de 15 coletas por ciclo, um segundo entre requisições e espera de 300 segundos após o processamento. Para alterar:
 
 ```bash
-poetry install
-poetry check
-poetry run task check
+make stream STREAM_MAX_COLLECTIONS=3 STREAM_COLLECTION_INTERVAL_SECONDS=60 STREAM_INTERVAL_SECONDS=300
 ```
 
-As tarefas disponíveis podem ser consultadas com `poetry run task --list`. Os comandos individuais incluem `task test`, `task lint`, `task format`, `task types` e `task docs`.
+`Ctrl+C` interrompe o loop; uma falha também encerra a execução. Mais detalhes no [guia de execução](docs/running.md).
 
-Para habilitar a validação automática antes de cada commit, execute o comando dentro de um repositório Git:
+## Artefatos e diagnóstico
+
+| Diretório | Conteúdo |
+| --- | --- |
+| `data/bronze/aircraft_states/` | Microbatches JSONL particionados por data e hora de ingestão |
+| `data/silver/aircraft_states/` | Observações válidas em Parquet |
+| `data/rejected/aircraft_states/` | Rejeições com motivo em JSONL |
+| `data/gold/latest/` | Última observação por aeronave, em JSONL |
+| `data/gold/traffic/` | Resumo das observações, em JSONL |
+| `data/observability/` | Relatórios JSON e subdiretório `logs/` |
+
+Os prefixos com UUID preservam as saídas anteriores. O resumo `traffic` usa todas as observações, enquanto `latest` seleciona uma por aeronave; contagens em voo/no solo no resumo podem incluir a mesma aeronave várias vezes.
+
+A execução completa grava `data/observability/logs/pipeline.log`, com rotação de 5 MB e três backups. Para exibir também INFO de Beam/Prism no terminal:
+
+```bash
+poetry run python -m air_traffic_beam.run_all --verbose
+```
+
+Consulte o [dicionário de dados](docs/data_dictionary.md) e o [contrato dos relatórios](docs/reports.md), incluindo as unidades das contagens e as limitações de registro de falhas.
+
+## Qualidade e desenvolvimento
+
+```bash
+poetry check
+poetry run task check
+poetry run task docs
+```
+
+| Comando | Função |
+| --- | --- |
+| `poetry run task lint` | Verificar código, imports e formatação com Ruff |
+| `poetry run task format` | Organizar imports e formatar |
+| `poetry run task types` | Executar Mypy |
+| `poetry run task tests` | Executar testes, mostrar linhas não cobertas e gerar `coverage.xml` |
+| `poetry run task check` | Executar lint, tipos e testes |
+| `poetry run task docs` | Gerar documentação com `mkdocs build --strict` |
+
+`task test` é um alias de `task tests`. Os testes exigem cobertura mínima de **70%** do pacote `air_traffic_beam`. Para ativar os hooks em cada clone:
 
 ```bash
 poetry run pre-commit install
 poetry run pre-commit run --all-files
 ```
 
-## Dashboard
+O pre-commit verifica código, formatação, YAML/TOML, conflitos e espaços em branco, e executa os testes com cobertura. Se corrigir arquivos, revise e adicione as alterações novamente antes do commit.
+
+## Documentação e GitHub Pages
+
+Para visualizar a documentação localmente:
 
 ```bash
-poetry run streamlit run src/air_traffic_beam/dashboard/app.py
+poetry run mkdocs serve
 ```
 
-O painel prioriza a visão Gold mais recente, com filtros por país e situação da aeronave, KPIs, mapa, tabela formatada e histórico de qualidade das execuções.
+Abra `http://127.0.0.1:8000`. O build estático fica em `site/`, ignorado pelo Git e pelo Docker.
 
-## Guias de estudo
+O workflow `CI` executa verificações em pull requests e pushes para `main` ou `master`. Publica a documentação somente em execuções da branch padrão, após todas as verificações passarem. Também pode ser iniciado manualmente pela aba **Actions**.
 
-- [Walkthrough completo do projeto](docs/project_walkthrough.md)
-- [Apache Beam explicado no contexto deste código](docs/apache_beam_explained.md)
+Configure **Settings → Pages → Build and deployment → Source → GitHub Actions** no repositório. O workflow usa `GITHUB_TOKEN`, sem token pessoal. Endereço configurado: [documentação no GitHub Pages](https://lal3x.github.io/air-traffic-medallion-pipeline/).
 
-## Pastas e módulos
+## Guias
 
-```text
-src/
-└── air_traffic_beam/
-    ├── __init__.py
-    ├── collectors/
-    │   ├── __init__.py
-    │   ├── opensky_client.py
-    │   └── aircraft_states.py
-    ├── pipelines/
-    │   ├── __init__.py
-    │   ├── hello_beam.py
-    │   └── bronze_to_silver.py
-    ├── transforms/
-    │   ├── __init__.py
-    │   └── aircraft_states.py
-    ├── schemas/
-    │   ├── __init__.py
-    │   └── silver.py
-    ├── config/
-    │   ├── __init__.py
-    │   └── settings.py
-    ├── observability/
-    │   └── __init__.py
-    └── exceptions.py
-```
-# air-traffic-medallion-pipeline
+- [Instalação e configuração](docs/setup.md)
+- [Arquitetura](docs/architecture.md)
+- [Execução local](docs/running.md)
+- [Dashboard](docs/dashboard.md)
+- [Walkthrough do projeto](docs/project_walkthrough.md)
+- [Apache Beam explicado](docs/apache_beam_explained.md)
+- [Dúvidas e diagnóstico](docs/faq.md)
+
+O código fica em `src/air_traffic_beam/`, os testes em `tests/` e a documentação em `docs/`.

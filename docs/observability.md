@@ -1,33 +1,26 @@
 # Observabilidade
 
-A observabilidade do projeto foi desenhada para apoiar estudo e depuração local sem esconder falhas reais.
-
-## O que é coletado
-
-- logs de execução do projeto;
-- métricas do pipeline Beam;
-- número de registros por etapa;
-- arquivos gerados em Bronze, Silver e Gold;
-- indicadores de rejeição e sucesso.
+O projeto registra logs técnicos e relatórios JSON com contagens obtidas dos artefatos produzidos. As métricas de negócio são calculadas após a gravação; não são contadores `Metrics.counter` do Beam.
 
 ## Onde ficam os artefatos
 
 ```text
-data/
-  observability/
-    run_reports/
-    logs/
+data/observability/
+  collector-<uuid>.json
+  bronze_to_silver-<uuid>.json
+  silver_to_gold-<uuid>.json
+  logs/
+    pipeline.log
 ```
 
-## Filosofia
+O arquivo de log é configurado pelo orquestrador `run_all`. Os relatórios preservam o histórico de cada etapa, enquanto o log possui rotação.
 
-A ideia não é ocultar erros com mensagens genéricas. O projeto mantém logs úteis e detalhados, mas com filtros que evitam poluição excessiva no terminal.
+## Investigar uma execução
 
-## Recomendação
+1. Confira o código de saída e a etapa indicada no terminal.
+2. Consulte `data/observability/logs/pipeline.log` se executou com `run_all`.
+3. Compare os horários e `output_paths` dos relatórios com os arquivos da carga.
+4. Inspecione os rejeitados JSONL em `data/rejected/aircraft_states/`.
+5. Use a aba **Qualidade** do dashboard para consultar o histórico.
 
-Para investigar uma falha, use:
-
-1. o log técnico em arquivo;
-2. o relatório de execução JSON;
-3. os arquivos rejectados;
-4. o dashboard como validação visual.
+Veja [Logs e relatórios](reports.md) para os campos reais, as unidades das contagens e os casos em que uma falha não produz relatório.

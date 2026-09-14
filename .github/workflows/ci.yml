@@ -4,6 +4,10 @@ on:
   push:
     branches: [main, master]
   pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   test:
@@ -20,8 +24,35 @@ jobs:
       - name: Poetry check
         run: poetry check
       - name: Ruff
-        run: poetry run ruff check .
+        run: poetry run task lint
       - name: Mypy
         run: poetry run mypy src
-      - name: Pytest
-        run: poetry run pytest -q
+      - name: Pytest with coverage
+        run: poetry run task tests
+      - name: Build documentation
+        run: poetry run mkdocs build --strict
+      - name: Upload Pages artifact
+        if: github.event_name != 'pull_request' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy-docs:
+    needs: test
+    if: github.event_name != 'pull_request' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    concurrency:
+      group: github-pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

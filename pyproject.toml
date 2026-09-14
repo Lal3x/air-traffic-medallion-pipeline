@@ -47,12 +47,16 @@ dev = [
 [tool.mypy]
 ignore_missing_imports = true
 
+[tool.ruff.lint]
+extend-select = ["I"]
+
 [tool.taskipy.tasks]
-test = "poetry run pytest -q"
-lint = "poetry run ruff check ."
-format = "poetry run ruff format ."
+test = "task tests"
+tests = "poetry run pytest tests -v --cov=air_traffic_beam --cov-report=term-missing --cov-report=xml --cov-fail-under=70"
+lint = "poetry run ruff check . && poetry run ruff format --check ."
+format = "poetry run ruff check --select I --fix . && poetry run ruff format ."
 format-check = "poetry run ruff format --check ."
 types = "poetry run mypy src"
 docs = "poetry run mkdocs build --strict"
-check = "task lint && task format-check && task types && task test"
+check = "task lint && task types && task tests"
 pre-commit-install = "poetry run pre-commit install"
