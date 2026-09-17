@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="420" viewBox="0 0 1200 420" role="img" aria-labelledby="title desc">
+  <title id="title">Arquitetura do pipeline de tráfego aéreo</title>
+  <desc id="desc">Fluxo da API OpenSky para coleta Python, camadas Bronze, Silver e Gold, observabilidade e dashboard Streamlit.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#07111f"/>
+      <stop offset="1" stop-color="#0c2340"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="8" flood-color="#020617" flood-opacity=".45"/>
+    </filter>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#38bdf8"/>
+    </marker>
+  </defs>
+  <rect width="1200" height="420" rx="24" fill="url(#bg)"/>
+  <text x="60" y="58" fill="#f8fafc" font-family="Arial, sans-serif" font-size="26" font-weight="700">Air Traffic Medallion Pipeline</text>
+  <text x="60" y="86" fill="#94a3b8" font-family="Arial, sans-serif" font-size="15">OpenSky · Python · Apache Beam · Parquet · Streamlit</text>
+
+  <g font-family="Arial, sans-serif" filter="url(#shadow)">
+    <g transform="translate(45 135)">
+      <rect width="150" height="105" rx="16" fill="#102a43" stroke="#38bdf8"/>
+      <text x="75" y="45" text-anchor="middle" fill="#e0f2fe" font-size="18" font-weight="700">OpenSky API</text>
+      <text x="75" y="73" text-anchor="middle" fill="#94a3b8" font-size="14">Aircraft states</text>
+    </g>
+    <g transform="translate(245 135)">
+      <rect width="150" height="105" rx="16" fill="#102a43" stroke="#38bdf8"/>
+      <text x="75" y="45" text-anchor="middle" fill="#e0f2fe" font-size="18" font-weight="700">Coleta Python</text>
+      <text x="75" y="73" text-anchor="middle" fill="#94a3b8" font-size="14">Retry + metadados</text>
+    </g>
+    <g transform="translate(445 135)">
+      <rect width="150" height="105" rx="16" fill="#3b2716" stroke="#f59e0b"/>
+      <text x="75" y="42" text-anchor="middle" fill="#fef3c7" font-size="18" font-weight="700">Bronze</text>
+      <text x="75" y="70" text-anchor="middle" fill="#fcd34d" font-size="14">JSONL bruto</text>
+    </g>
+    <g transform="translate(645 135)">
+      <rect width="150" height="105" rx="16" fill="#273449" stroke="#cbd5e1"/>
+      <text x="75" y="42" text-anchor="middle" fill="#f8fafc" font-size="18" font-weight="700">Silver</text>
+      <text x="75" y="70" text-anchor="middle" fill="#cbd5e1" font-size="14">Parquet validado</text>
+    </g>
+    <g transform="translate(845 135)">
+      <rect width="150" height="105" rx="16" fill="#3d3212" stroke="#facc15"/>
+      <text x="75" y="42" text-anchor="middle" fill="#fef9c3" font-size="18" font-weight="700">Gold</text>
+      <text x="75" y="70" text-anchor="middle" fill="#fde047" font-size="14">Agregações</text>
+    </g>
+    <g transform="translate(1045 135)">
+      <rect width="110" height="105" rx="16" fill="#123c34" stroke="#2dd4bf"/>
+      <text x="55" y="42" text-anchor="middle" fill="#ccfbf1" font-size="17" font-weight="700">Streamlit</text>
+      <text x="55" y="70" text-anchor="middle" fill="#5eead4" font-size="14">Dashboard</text>
+    </g>
+  </g>
+
+  <g stroke="#38bdf8" stroke-width="3" fill="none" marker-end="url(#arrow)">
+    <path d="M195 188 H235"/>
+    <path d="M395 188 H435"/>
+    <path d="M595 188 H635"/>
+    <path d="M795 188 H835"/>
+    <path d="M995 188 H1035"/>
+  </g>
+
+  <rect x="245" y="300" width="750" height="72" rx="16" fill="#0f1f33" stroke="#2563eb" stroke-dasharray="8 6"/>
+  <text x="620" y="329" text-anchor="middle" fill="#bfdbfe" font-family="Arial, sans-serif" font-size="17" font-weight="700">Observabilidade transversal</text>
+  <text x="620" y="355" text-anchor="middle" fill="#94a3b8" font-family="Arial, sans-serif" font-size="14">logs estruturados · métricas por etapa · relatórios de execução · registros rejeitados</text>
+</svg>
