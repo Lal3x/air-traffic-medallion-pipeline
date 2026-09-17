@@ -1,8 +1,17 @@
 # Brazil Air Traffic Beam
 
+[![CI](https://github.com/Lal3x/air-traffic-medallion-pipeline/actions/workflows/ci.yml/badge.svg)](https://github.com/Lal3x/air-traffic-medallion-pipeline/actions/workflows/ci.yml)
+![Python](https://img.shields.io/badge/Python-3.13-3776AB?logo=python&logoColor=white)
+![Apache Beam](https://img.shields.io/badge/Apache%20Beam-2.73-EA4335)
+![Coverage](https://img.shields.io/badge/coverage-%E2%89%A570%25-2ea44f)
+![License](https://img.shields.io/badge/license-MIT-blue)
+
+
 Pipeline local de tráfego aéreo na região de São Paulo, com coleta OpenSky, Apache Beam e arquitetura medalhão. O projeto transforma respostas da API em dados analíticos, mantém artefatos por execução e apresenta os resultados em um dashboard Streamlit.
 
 ## Arquitetura
+
+![Arquitetura do pipeline de tráfego aéreo](docs/assets/architecture.svg)
 
 ```text
 OpenSky → Coletor Python → Bronze (JSONL)
@@ -18,6 +27,15 @@ OpenSky → Coletor Python → Bronze (JSONL)
 - **Observabilidade:** relatórios JSON por etapa e logs técnicos da execução completa.
 
 Os pipelines usam `DirectRunner` localmente. `make stream` repete lotes finitos; não há um pipeline de streaming ilimitado configurado.
+
+## Decisões de arquitetura
+
+- **Execução local e reproduzível:** o DirectRunner permite estudar e validar os pipelines sem depender de infraestrutura em nuvem.
+- **Camadas imutáveis por execução:** UUIDs e partições temporais preservam o histórico e facilitam auditoria e reprocessamento.
+- **Parquet na Silver:** formato colunar reduz leitura desnecessária e facilita consultas analíticas com DuckDB.
+- **Registros rejeitados separados:** dados inválidos não interrompem o pipeline e permanecem disponíveis para diagnóstico.
+- **Observabilidade como parte do fluxo:** cada etapa produz métricas, relatórios e logs, em vez de tratar monitoramento como recurso posterior.
+- **Dashboard desacoplado:** o Streamlit consome os artefatos Gold sem iniciar ou controlar a coleta.
 
 ## Começar
 
@@ -105,6 +123,17 @@ poetry run python -m air_traffic_beam.run_all --verbose
 ```
 
 Consulte o [dicionário de dados](docs/data_dictionary.md) e o [contrato dos relatórios](docs/reports.md), incluindo as unidades das contagens e as limitações de registro de falhas.
+
+## Limitações e evolução para produção
+
+Este repositório representa uma implementação local e educacional. Para uma operação contínua em produção, os próximos passos seriam:
+
+- substituir o loop de microbatches por ingestão realmente contínua e adicionar janelas, triggers e watermarks;
+- executar o Beam em um runner distribuído, como Google Cloud Dataflow, Flink ou Spark;
+- armazenar Bronze, Silver e Gold em object storage, com catálogo e políticas de retenção;
+- adicionar idempotência por carga e controle explícito de dados atrasados;
+- publicar métricas em uma plataforma de monitoramento e configurar alertas;
+- disponibilizar o dashboard como serviço, com autenticação e atualização controlada.
 
 ## Qualidade e desenvolvimento
 
